@@ -1,37 +1,31 @@
-import express from "express"
-import mongoose from "mongoose"
-import cors from "cors"
-import dotenv from "dotenv"
-
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import pool from "./config/db.js";
 import userRouter from "./routes/userRoute.js"
 import taskRouter from "./routes/taskRoute.js"
-import forgotPasswordRouter from "./routes/forgotPassword.js"
 
-//app config
-dotenv.config()
-const app = express()
-const port = process.env.PORT || 8001
-mongoose.set('strictQuery', true);
+dotenv.config();
 
-//middlewares
-app.use(express.json())
-app.use(cors())
+const app=express();
+const port=process.env.PORT || 8000;
 
-//db config
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-}, (err) => {
-    if (err) {
-        console.log(err)
-    } else {
-        console.log("DB Connected")
+app.use(express.json());
+app.use(cors());
+
+app.get("/api/health",async (req,res)=>{
+    try{
+        const result=await pool.query("SELECT 1");
+        res.status(200).json({status:"ok",message:"TODO API is running",database:"connected"});
+    }catch(error){
+        res.status(503).json({status:"error",message:error.message})
     }
 })
 
-//api endpoints
-app.use("/api/user", userRouter)
-app.use("/api/task", taskRouter)
-app.use("/api/forgotPassword", forgotPasswordRouter)
+app.use("/api/user",userRouter);
+app.use("/api/task",taskRouter);
 
-//listen
-app.listen(port, () => console.log(`Listening on localhost:${port}`))
+
+app.listen(port,()=>{
+    console.log(`Server running on http://localhost:${port}`);
+})

@@ -1,78 +1,92 @@
-import userModel from "../models/userModel.js";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import validator from "validator";
+import pool from "../config/db.js";
 
-//create token
 const createToken = (id) => {
-    return jwt.sign({id}, process.env.JWT_SECRET, {
-        expiresIn: 3 * 24 * 60 * 60
-    })
-}
+    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+};
 
-//login user
-const loginUser = async (req,res) => {
-    const {email, password} = req.body;
-    try{
-        if(!email || !password){
-            return res.status(400).json({message: "Please enter all fields"})
-        }
-        const user = await userModel.findOne({email})
+export const registerUser = async (req, res) => {
+    const { username, email, password } = req.body;
 
-        if(!user){
-            return res.status(400).json({message: "User does not exist"})
+    if (!username || !email || !password) {
+        return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (!validator.isEmail(email)) {
+        return res.status(400).json({ message: "Invalid email" });
+    }
+
+    if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    try {
+        const [existing] = await pool.query("SELECT id FROM users WHERE email = ?", [email]);
+        if (existing.length > 0) {
+            return res.status(400).json({ message: "Email already registered" });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password)
-        if(!isMatch){
-            return res.status(400).json({message: "Invalid credentials"})
-        }
-        const token = createToken(user._id)
-        res.status(200).json({user,token})
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const [result] = await pool.query(
+            "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+            [username, email, hashedPassword]
+        );
+
+        const token = createToken(result.insertId);
+        res.status(201).json({
+            token,
+            user: { id: result.insertId, username, email },
+        });
     } catch (error) {
-        res.status(500).json({message: error.message})
+        res.status(500).json({ message: error.message });
     }
-}
+};
 
-//register user
-const registerUser = async (req,res) => {
-    const {name, email, password} = req.body;
-    try{
-        //check if user already exists
-        const exists = await userModel.findOne({email})
-        if(exists){
-            return res.status(400).json({message: "User already exists"})
-        }
-        if (validator.isEmpty(name) || validator.isEmpty(email) || validator.isEmpty(password)) {
-            return res.status(400).json({message: "Please enter all fields"})
-        }
-        if(!validator.isEmail(email)){
-            return res.status(400).json({message: "Please enter a valid email"})
-        }
-        if(!validator.isStrongPassword(password)){
-            return res.status(400).json({message: "Please enter a strong password"})
-        }
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt)
+export const loginUser = async (req, res) => {
+    const { email, password } = req.body;
 
-        const newUser = new userModel({name, email, password: hashedPassword})
-        const user = await newUser.save()
-        const token = createToken(user._id)
-        res.status(200).json({user,token})
-
-    } catch(error){
-        res.status(500).json({message: error.message})
+    if (!email || !password) {
+        return res.status(400).json({ message: "Email and password required" });
     }
-}
 
-//get user info
-const getUser = async (req,res) => {
-    const id = req.user.id
-    try{
-        const user = await userModel.find({_id:id})
-        res.status(200).json({user: user[0]})
-    } catch(error){
-        res.status(502).json({message: error.message})
+    try {
+        const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+        const user = rows[0];
+
+        if (!user) {
+            return res.status(401).json({ message: "Invalid Credentials" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid Credentials" });
+        }
+
+        const token = createToken(user.id);
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
-}
-export {loginUser, registerUser, getUser}
+};
+
+export const getUser = async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT id, username, email FROM users WHERE id = ?", [req.userId]);
+        if (!rows[0]) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.json({ user: rows[0] });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

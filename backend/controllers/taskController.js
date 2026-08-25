@@ -1,60 +1,75 @@
-import taskModel from "../models/taskModel.js";
-import userModel from "../models/userModel.js";
-import { createTransport } from 'nodemailer';
-import dotenv from "dotenv";
-dotenv.config();
-const sendMail = (email, subject, title, description) => {
-    var transporter = createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.GMAIL_USERNAME,
-            pass: process.env.GMAIL_PASSWORD
-        }
-    });
+import pool from "../config/db.js";
 
-    var mailOptions = {
-        from: 'alok.yadav6000@gmail.com',
-        to: email,
-        subject: subject,
-        html:`<h1>Task added successfully</h1><h2>Title: ${title}</h2><h3>Description: ${description}</h3>`
-    };
 
-    transporter.sendMail(mailOptions, function (error, info) {
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
-}
-const addTask = async (req, res) => {
-    const { title, description } = req.body;
-    const userId = req.user.id;
-    const user = await userModel.find({_id: userId});
-    const newTask = new taskModel({ title, description, completed: false, userId })
-    newTask.save()
-        .then(() => {
-            sendMail(user[0].email, "Task Added", title, description)
-            return (res.status(200).json({ message: "Task added successfully" }))
-        })
-        .catch((error) => {
-            return (
-                res.status(500).json({ message: error.message })
-            )
-        }
-        )
-}
-const removeTask = (req, res) => {
-    const { id } = req.body;
-    console.log("id: ", id);
-    taskModel.findByIdAndDelete(id)
-        .then(() => res.status(200).json({ message: "Task deleted successfully" }))
-        .catch((error) => res.status(501).json({ message: error.message }))
-}
+//GET /api/task
+export const getTasks=async(req,res)=>{
+  try{
+    const [tasks]=await pool.query(
+        "SELECT * FROM tasks WHERE user_id=? ORDER BY created_at DESC",[req.userId]
+    );
+    res.json(tasks);
+  }catch(error){
+    res.status(500).json({message:error.message});
+  }
+};
 
-const getTask = (req, res) => {
-    taskModel.find({ userId: req.user.id })
-        .then((data) => res.status(200).json(data))
-        .catch((error) => res.status(501).json({ message: error.message }))
-}
-export { addTask, getTask,removeTask }
+//POST /api/task
+export const createTask=async (req,res)=>{
+    const {title,description}=req.body;
+    if(!title?.trim()){
+        return res.status(400).json({message:"Title is required" });
+    }
+
+    try{
+        const [result]=await pool.query(
+            "INSERT INTO tasks (user_id, title, description) VALUES (?, ?, ?)",
+            [req.userId,title.trim(),description || null]
+        );
+
+        const [rows]=await pool.query("SELECT * FROM tasks WHERE id=?",[result.insertId]);
+        res.status(201).json(rows[0]);
+    }catch(error){
+        res.status(500).json({message:error.message});
+    }
+};
+
+// PUT /api/task/:id
+export const updateTask = async (req, res) => {
+    const { title, description, status } = req.body;
+    try {
+      const [existing] = await pool.query(
+        "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+        [req.params.id, req.userId]
+      );
+      if (!existing[0]) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      await pool.query(
+        `UPDATE tasks SET
+          title = COALESCE(?, title),
+          description = COALESCE(?, description),
+          status = COALESCE(?, status)
+         WHERE id = ? AND user_id = ?`,
+        [title, description, status, req.params.id, req.userId]
+      );
+      const [rows] = await pool.query("SELECT * FROM tasks WHERE id = ?", [req.params.id]);
+      res.json(rows[0]);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  };
+  // DELETE /api/task/:id
+  export const deleteTask = async (req, res) => {
+    try {
+      const [result] = await pool.query(
+        "DELETE FROM tasks WHERE id = ? AND user_id = ?",
+        [req.params.id, req.userId]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json({ message: "Task deleted" });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  };
