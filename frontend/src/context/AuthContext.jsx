@@ -1,43 +1,77 @@
-import { createContext, useContext, useReducer, useEffect } from "react";
+import { createContext, useState, useEffect, useContext } from "react";
 import api from "../api/axios";
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
-const authReducer = (state, action) => {
-  switch (action.type) {
-    case "LOGIN":
-      localStorage.setItem("authToken", action.payload.token);
-      return { user: action.payload.user, token: action.payload.token };
-    case "LOGOUT":
-      localStorage.removeItem("authToken");
-      return { user: null, token: null };
-    case "SET_USER":
-      return { ...state, user: action.payload };
-    default:
-      return state;
-  }
-};
+const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [token, setToken] = useState(localStorage.getItem("velotask_token"), null);
+    const [loading, setLoading] = useState(true);
 
-export const AuthProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(authReducer, {
-    user: null,
-    token: localStorage.getItem("authToken"),
-  });
-
-  useEffect(() => {
-    if (state.token) {
-      api
-        .get("/user/me")
-        .then((res) => dispatch({ type: "SET_USER", payload: res.data.user }))
-        .catch(() => dispatch({ type: "LOGOUT" }));
+    const fetchUser = async () => {
+        if (token) {
+            try {
+                const res = await api.get("/user/me");
+                setUser(res.data.user);
+            } catch (err) {
+                console.error("Session expired or invalid token", err);
+                logout();
+            }
+        }
+        setLoading(false);
     }
-  }, [state.token]);
 
-  return (
-    <AuthContext.Provider value={{ ...state, dispatch }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+    useEffect(() => {
+        const fetchUser = async () => {
+            if (token) {
+                try {
+                    const res = await api.get("/user/me");
+                    setUser(res.data.user);
+                } catch (err) {
+                    console.error("Session expired or invalid token", err);
+                    logout();
+                }
+            }
+            setLoading(false);
+        }
+        fetchUser();
+    }, [token]);
+
+    const login = async (email, password) => {
+        const res = await api.post("/user/login", { email, password });
+        localStorage.setItem("velotask", res.data.token);
+        setToken(res.data.token);
+        setUser(res.data.user);
+        return res.data;
+    };
+
+    const register = async (username, email, password) => {
+        const res = await api.post("/user/register", { username, email, password });
+        localStorage.setItem("velotask_token", res.data.token);
+        setToken(res.data.token);
+        setUser(res.data.user);
+        return res.data;
+    }
+
+    const logout = () => {
+        localStorage.removeItem("velotask_token");
+        setToken(null);
+        setUser(null);
+    }
+
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                token,
+                loading,
+                login,
+                register,
+                logout
+            }}>
+            {children}
+        </AuthContext.Provider>
+    )
+}
 
 export const useAuth = () => useContext(AuthContext);
