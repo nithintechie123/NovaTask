@@ -3,7 +3,7 @@ import api from "../api/axios";
 
 const AuthContext = createContext();
 
-const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem("velotask_token"), null);
     const [loading, setLoading] = useState(true);
@@ -39,7 +39,7 @@ const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         const res = await api.post("/user/login", { email, password });
-        localStorage.setItem("velotask", res.data.token);
+        localStorage.setItem("velotask_token", res.data.token);
         setToken(res.data.token);
         setUser(res.data.user);
         return res.data;
