@@ -17,7 +17,7 @@ export default function Navbar() {
                         <CheckSquare size={20} className="text-white" />
                     </div>
                     <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                        Velo<span className="text-indigo-600 dark:text-indigo-400">Task</span>
+                        Nova<span className="text-indigo-600 dark:text-indigo-400">Task</span>
                     </span>
                 </div>
 

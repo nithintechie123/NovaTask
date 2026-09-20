@@ -4,7 +4,7 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useState(() => {
-        const saved = localStorage.getItem("velotask_theme");
+        const saved = localStorage.getItem("novatask_theme") || localStorage.getItem("velotask_theme");
         if (saved) return saved;
         return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     });
@@ -16,7 +16,7 @@ export const ThemeProvider = ({ children }) => {
         } else {
             root.classList.remove("dark");
         }
-        localStorage.setItem("velotask_theme", theme);
+        localStorage.setItem("novatask_theme", theme);
     }, [theme]);
 
     const toggleTheme = () => {

@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function initDatabase() {
-  const dbName = process.env.DB_NAME || "todoapp";
+  const dbName = process.env.DB_NAME || "novatask";
 
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || "localhost",

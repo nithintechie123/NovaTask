@@ -7,7 +7,7 @@ export default function ProtectedRoute() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p className="text-slate-400 text-lg animate-pulse">Loading VeloTask...</p>
+        <p className="text-slate-400 text-lg animate-pulse">Loading NovaTask...</p>
       </div>
     );
   }

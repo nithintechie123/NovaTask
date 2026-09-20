@@ -40,7 +40,7 @@ export default function Register() {
                         <CheckSquare size={32} className="text-white" />
                     </div>
                     <h1 className="text-2xl font-extrabold tracking-tight text-white">Create Account</h1>
-                    <p className="text-slate-400 text-sm mt-1">Get started with VeloTask today</p>
+                    <p className="text-slate-400 text-sm mt-1">Get started with NovaTask today</p>
                 </div>
 
                 {error && (

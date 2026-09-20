@@ -1,4 +1,4 @@
-# ⚡ VeloTask
+# ⚡ NovaTask
 
 A modern, fast, and responsive full-stack task management application built with **React**, **Tailwind CSS v4**, **Node.js/Express**, and **MySQL**.
 
@@ -35,7 +35,7 @@ A modern, fast, and responsive full-stack task management application built with
 ## 📁 Project Structure
 
 ```text
-VeloTask/
+NovaTask/
 ├── backend/
 │   ├── config/          # MySQL database connection pool
 │   ├── controllers/     # Task and User route controllers
@@ -74,8 +74,8 @@ VeloTask/
 
 ### **1. Clone the Repository**
 ```bash
-git clone https://github.com/nithintechie123/VeloTask.git
-cd VeloTask
+git clone https://github.com/nithintechie123/NovaTask.git
+cd NovaTask
 ```
 
 ---
@@ -102,7 +102,7 @@ cd VeloTask
    DB_HOST=localhost
    DB_USER=root
    DB_PASSWORD=your_mysql_password
-   DB_NAME=todoapp
+   DB_NAME=novatask
    DB_PORT=3306
 
    PORT=8000
